@@ -69,6 +69,21 @@ final class RemoteFeedLoaderTests: XCTestCase {
         XCTAssertEqual(capturedResults, [.failure(.connectivityError)])
     }
     
+    func test_load_deliversErrorOnNon200HTTPStatusCode() {
+        let url = URL(string: "https://a-given-url.com")!
+        let (sut, client) = makeSUT(with: url)
+        let samples = [199, 200, 201, 300, 400, 500]
+        
+        samples.enumerated().forEach { index, code in
+            var capturedResults = [RemoteFeedLoaderResult]()
+            sut.load { result in
+                capturedResults.append(result)
+            }
+            client.completeWith(statusCode: code, at: index)
+            XCTAssertEqual(capturedResults, [.failure(.invalidData)])
+        }
+    }
+    
     // MARK: - Helpers
     
     private func makeSUT(with url: URL = URL(string: "https://any-url.com")!) -> (sut: RemoteFeedLoader, client: HTTPClientSpy) {
@@ -89,6 +104,17 @@ final class RemoteFeedLoaderTests: XCTestCase {
         
         func completeWith(error: Error, at index: Int = 0) {
             completions[index](.failure(error))
+        }
+        
+        func completeWith(statusCode: Int, data: Data = Data(), at index: Int = 0, file: StaticString = #file, line: UInt = #line) {
+            guard let httpURLResponse = HTTPURLResponse(url: requestedURLs[index],
+                                                        statusCode: statusCode,
+                                                        httpVersion: nil,
+                                                        headerFields: nil) else {
+                return XCTFail("Invalid HTTPURLResponse", file: file, line: line)
+            }
+            
+            completions[index](.success(data, httpURLResponse))
         }
     }
     

@@ -29,10 +29,10 @@ public class RemoteFeedLoader {
     public func load(completion: @escaping (RemoteFeedLoaderResult) -> Void = { _ in }) {
         client.get(from: url) { result in
             switch result {
+            case .success:
+                completion(.failure(.invalidData))
             case .failure:
                 completion(.failure(.connectivityError))
-            default:
-                break
             }
         }
     }
