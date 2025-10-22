@@ -30,7 +30,7 @@ import XCTest
 import CleanFeed
 
 final class RemoteFeedLoaderTests: XCTestCase {
-
+    
     func test_init_doesNotRequestDataFromURL() {
         let (_, client) = makeSUT()
         
@@ -57,60 +57,59 @@ final class RemoteFeedLoaderTests: XCTestCase {
     }
     
     func test_load_deliversErrorOnClientError() {
-        let url = URL(string: "https://a-given-url.com")!
-        let (sut, client) = makeSUT(with: url)
-        var capturedResults = [RemoteFeedLoaderResult]()
+        let (sut, client) = makeSUT()
         
-        sut.load { capturedResults.append($0) }
-        client.completeWith(error: clientError())
-        
-        XCTAssertEqual(capturedResults, [.failure(.connectivityError)])
+        expect(sut: sut, toCompleteWith: .failure(.connectivityError)) {
+            client.completeWith(error: clientError())
+        }
     }
     
     func test_load_deliversErrorOnNon200HTTPStatusCode() {
-        let url = URL(string: "https://a-given-url.com")!
-        let (sut, client) = makeSUT(with: url)
+        let (sut, client) = makeSUT()
         let samples = [199, 201, 300, 400, 500]
         
         samples.enumerated().forEach { index, code in
-            var capturedResults = [RemoteFeedLoaderResult]()
-            sut.load { capturedResults.append($0) }
-            client.completeWith(statusCode: code, data: emptyJSONListData(), at: index)
-            XCTAssertEqual(capturedResults, [.failure(.invalidData)])
+            expect(sut: sut, toCompleteWith: .failure(.invalidData)) {
+                client.completeWith(statusCode: code, data: emptyJSONListData(), at: index)
+            }
         }
     }
     
     func test_load_deliversErrorOn200HTTPStatusCodeWithInvalidJSON() {
-        let url = URL(string: "https://a-given-url.com")!
-        let (sut, client) = makeSUT(with: url)
-        var capturedResults = [RemoteFeedLoaderResult]()
+        let (sut, client) = makeSUT()
         
-        sut.load { capturedResults.append($0) }
-        client.completeWith(statusCode: 200, data: invalidJSONData())
-        
-        XCTAssertEqual(capturedResults, [.failure(.invalidData)])
+        expect(sut: sut, toCompleteWith: .failure(.invalidData)) {
+            client.completeWith(statusCode: 200, data: invalidJSONData())
+        }
     }
     
     func test_load_deliversEmptyFeedOn200HTTPStatusCodeWithEmptyJSONList() {
-        let url = URL(string: "https://a-given-url.com")!
-        let (sut, client) = makeSUT(with: url)
-        var capturedResults = [RemoteFeedLoaderResult]()
+        let (sut, client) = makeSUT()
         
-        sut.load { capturedResults.append($0) }
-        client.completeWith(statusCode: 200, data: emptyJSONListData())
-        
-        XCTAssertEqual(capturedResults, [.success([])])
+        expect(sut: sut, toCompleteWith: .success([])) {
+            client.completeWith(statusCode: 200, data: emptyJSONListData())
+        }
     }
     
     func test_load_deliversFeedOn200HTTPStatusCodeWithNonEmptyJSONList() {
-        let url = URL(string: "https://a-given-url.com")!
-        let (sut, client) = makeSUT(with: url)
+        let (sut, client) = makeSUT()
+        
+        expect(sut: sut, toCompleteWith: .success(nonEmptyFeed())) {
+            client.completeWith(statusCode: 200, data: nonEmptyJSONListData())
+        }
+    }
+    
+    func expect(sut: RemoteFeedLoader,
+                toCompleteWith result: RemoteFeedLoaderResult,
+                when action: () -> Void,
+                file: StaticString = #file,
+                line: UInt = #line) {
         var capturedResults = [RemoteFeedLoaderResult]()
         
         sut.load { capturedResults.append($0) }
-        client.completeWith(statusCode: 200, data: nonEmptyJSONListData())
+        action()
         
-        XCTAssertEqual(capturedResults, [.success(nonEmptyFeed())])
+        XCTAssertEqual(capturedResults, [result], file: file, line: line)
     }
     
     // MARK: - Helpers
@@ -187,7 +186,7 @@ final class RemoteFeedLoaderTests: XCTestCase {
     private class HTTPClientSpy: HTTPClient {
         var requestedURLs = [URL]()
         var completions = [(HTTPClientResult) -> Void]()
- 
+        
         func get(from url: URL, completion: @escaping (HTTPClientResult) -> Void) {
             requestedURLs.append(url)
             completions.append(completion)
