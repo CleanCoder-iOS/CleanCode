@@ -108,19 +108,9 @@ final class RemoteFeedLoaderTests: XCTestCase {
         var capturedResults = [RemoteFeedLoaderResult]()
         
         sut.load { capturedResults.append($0) }
+        client.completeWith(statusCode: 200, data: nonEmptyJSONListData())
         
-        let feedItem1 = makeFeedItem(id: UUID(), description: nil, location: nil, imageURL: URL(string: "https://image-1-url.com")!)
-        let feedItem2 = makeFeedItem(id: UUID(), description: "second description", location: nil, imageURL: URL(string: "https://image-2-url.com")!)
-        let feedItem3 = makeFeedItem(id: UUID(), description: nil, location: "third location", imageURL: URL(string: "https://image-3-url.com")!)
-        let feedItem4 = makeFeedItem(id: UUID(), description: "fourth description", location: "fourth location", imageURL: URL(string: "https://image-4-url.com")!)
-        
-        let jsonList = ["items" : [feedItem1.json, feedItem2.json, feedItem3.json, feedItem4.json]]
-        let feed = [feedItem1.model, feedItem2.model, feedItem3.model, feedItem4.model]
-        
-        let data = try! JSONSerialization.data(withJSONObject: jsonList)
-        client.completeWith(statusCode: 200, data: data)
-        
-        XCTAssertEqual(capturedResults, [.success(feed)])
+        XCTAssertEqual(capturedResults, [.success(nonEmptyFeed())])
     }
     
     // MARK: - Helpers
@@ -144,13 +134,54 @@ final class RemoteFeedLoaderTests: XCTestCase {
         "{ \"items\" : [] }".data(using: .utf8)!
     }
     
-    private func makeFeedItem(id: UUID, description: String?, location: String?, imageURL: URL) -> (model: FeedItem, json: [String: String]) {
-        let model = FeedItem(id: id, description: description, location: location, imageURL: imageURL)
-        let json : [String: String] = [ "id" : id.uuidString,
-                                     "description" : description,
-                                     "location" : location,
-                                     "image" : imageURL.absoluteString].compactMapValues { $0 }
-        return (model, json)
+    private func nonEmptyJSONListData() -> Data {
+        """
+        {
+            "items": [
+                {
+                    "id": "73A7F70C-75DA-4C2E-B5A3-EED40DC53AA6",
+                    "description": "Description 1",
+                    "location": "Location 1",
+                    "image": "https://url-1.com",
+                },
+                {
+                    "id": "BA298A85-6275-48D3-8315-9C8F7C1CD109",
+                    "location": "Location 2",
+                    "image": "https://url-2.com",
+                },
+                {
+                    "id": "5A0D45B3-8E26-4385-8C5D-213E160A5E3C",
+                    "description": "Description 3",
+                    "image": "https://url-3.com",
+                },
+                {
+                    "id": "FF0ECFE2-2879-403F-8DBE-A83B4010B340",
+                    "image": "https://url-4.com",
+                },
+            ]
+        }
+        """.data(using: .utf8)!
+    }
+    
+    private func nonEmptyFeed() -> [FeedItem] {
+        let feedItem1 = FeedItem(id: UUID(uuidString: "73A7F70C-75DA-4C2E-B5A3-EED40DC53AA6")!,
+                                 description: "Description 1",
+                                 location: "Location 1",
+                                 imageURL: URL(string: "https://url-1.com")!)
+        let feedItem2 = FeedItem(id: UUID(uuidString: "BA298A85-6275-48D3-8315-9C8F7C1CD109")!,
+                                 description: nil,
+                                 location: "Location 2",
+                                 imageURL: URL(string: "https://url-2.com")!)
+        let feedItem3 = FeedItem(id: UUID(uuidString: "5A0D45B3-8E26-4385-8C5D-213E160A5E3C")!,
+                                 description: "Description 3",
+                                 location: nil,
+                                 imageURL: URL(string: "https://url-3.com")!)
+        let feedItem4 = FeedItem(id: UUID(uuidString: "FF0ECFE2-2879-403F-8DBE-A83B4010B340")!,
+                                 description: nil,
+                                 location: nil,
+                                 imageURL: URL(string: "https://url-4.com")!)
+        
+        return [feedItem1, feedItem2, feedItem3, feedItem4]
     }
     
     private class HTTPClientSpy: HTTPClient {
