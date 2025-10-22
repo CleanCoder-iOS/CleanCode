@@ -109,21 +109,18 @@ final class RemoteFeedLoaderTests: XCTestCase {
         
         sut.load { capturedResults.append($0) }
         
-        let feedItem1 = FeedItem(id: UUID(), description: nil, location: nil, imageURL: URL(string: "https://image-1-url.com")!)
-        let feedItem2 = FeedItem(id: UUID(), description: "second description", location: nil, imageURL: URL(string: "https://image-2-url.com")!)
-        let feedItem3 = FeedItem(id: UUID(), description: nil, location: "third location", imageURL: URL(string: "https://image-3-url.com")!)
-        let feedItem4 = FeedItem(id: UUID(), description: "fourth description", location: "fourth location", imageURL: URL(string: "https://image-4-url.com")!)
+        let feedItem1 = makeFeedItem(id: UUID(), description: nil, location: nil, imageURL: URL(string: "https://image-1-url.com")!)
+        let feedItem2 = makeFeedItem(id: UUID(), description: "second description", location: nil, imageURL: URL(string: "https://image-2-url.com")!)
+        let feedItem3 = makeFeedItem(id: UUID(), description: nil, location: "third location", imageURL: URL(string: "https://image-3-url.com")!)
+        let feedItem4 = makeFeedItem(id: UUID(), description: "fourth description", location: "fourth location", imageURL: URL(string: "https://image-4-url.com")!)
         
-        let json = ["items" : [
-            ["id" : feedItem1.id.uuidString, "image" : feedItem1.imageURL.absoluteString],
-            ["id" : feedItem2.id.uuidString, "description" : feedItem2.description!, "image" : feedItem2.imageURL.absoluteString],
-            ["id" : feedItem3.id.uuidString, "location" : feedItem3.location!, "image" : feedItem3.imageURL.absoluteString],
-            ["id" : feedItem4.id.uuidString, "description" : feedItem4.description!, "location" : feedItem4.location!, "image" : feedItem4.imageURL.absoluteString]
-        ]]
-        let data = try! JSONSerialization.data(withJSONObject: json)
+        let jsonList = ["items" : [feedItem1.json, feedItem2.json, feedItem3.json, feedItem4.json]]
+        let feed = [feedItem1.model, feedItem2.model, feedItem3.model, feedItem4.model]
+        
+        let data = try! JSONSerialization.data(withJSONObject: jsonList)
         client.completeWith(statusCode: 200, data: data)
         
-        XCTAssertEqual(capturedResults, [.success([feedItem1, feedItem2, feedItem3, feedItem4])])
+        XCTAssertEqual(capturedResults, [.success(feed)])
     }
     
     // MARK: - Helpers
@@ -145,6 +142,15 @@ final class RemoteFeedLoaderTests: XCTestCase {
     
     private func emptyJSONListData() -> Data {
         "{ \"items\" : [] }".data(using: .utf8)!
+    }
+    
+    private func makeFeedItem(id: UUID, description: String?, location: String?, imageURL: URL) -> (model: FeedItem, json: [String: String]) {
+        let model = FeedItem(id: id, description: description, location: location, imageURL: imageURL)
+        let json : [String: String] = [ "id" : id.uuidString,
+                                     "description" : description,
+                                     "location" : location,
+                                     "image" : imageURL.absoluteString].compactMapValues { $0 }
+        return (model, json)
     }
     
     private class HTTPClientSpy: HTTPClient {
