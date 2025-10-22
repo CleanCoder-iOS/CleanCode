@@ -41,7 +41,7 @@ final class RemoteFeedLoaderTests: XCTestCase {
         let url = URL(string: "https://a-given-url.com")!
         let (sut, client) = makeSUT(with: url)
         
-        sut.load()
+        sut.load { _ in }
         
         XCTAssertEqual(client.requestedURLs, [url])
     }
@@ -50,8 +50,8 @@ final class RemoteFeedLoaderTests: XCTestCase {
         let url = URL(string: "https://a-given-url.com")!
         let (sut, client) = makeSUT(with: url)
         
-        sut.load()
-        sut.load()
+        sut.load { _ in }
+        sut.load { _ in }
         
         XCTAssertEqual(client.requestedURLs, [url, url])
     }
@@ -61,10 +61,8 @@ final class RemoteFeedLoaderTests: XCTestCase {
         let (sut, client) = makeSUT(with: url)
         var capturedResults = [RemoteFeedLoaderResult]()
         
-        sut.load { result in
-            capturedResults.append(result)
-        }
-        client.completeWith(error: anyError())
+        sut.load { capturedResults.append($0) }
+        client.completeWith(error: clientError())
         
         XCTAssertEqual(capturedResults, [.failure(.connectivityError)])
     }
@@ -76,9 +74,7 @@ final class RemoteFeedLoaderTests: XCTestCase {
         
         samples.enumerated().forEach { index, code in
             var capturedResults = [RemoteFeedLoaderResult]()
-            sut.load { result in
-                capturedResults.append(result)
-            }
+            sut.load { capturedResults.append($0) }
             client.completeWith(statusCode: code, at: index)
             XCTAssertEqual(capturedResults, [.failure(.invalidData)])
         }
@@ -91,6 +87,10 @@ final class RemoteFeedLoaderTests: XCTestCase {
         let sut = RemoteFeedLoader(url: url, client: client)
         
         return (sut, client)
+    }
+    
+    private func clientError() -> Error {
+        NSError(domain: "HTTPClient error", code: 0)
     }
     
     private class HTTPClientSpy: HTTPClient {
@@ -116,9 +116,5 @@ final class RemoteFeedLoaderTests: XCTestCase {
             
             completions[index](.success(data, httpURLResponse))
         }
-    }
-    
-    private func anyError() -> Error {
-        NSError(domain: "HTTPClient error", code: 0)
     }
 }
