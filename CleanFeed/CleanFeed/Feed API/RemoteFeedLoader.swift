@@ -7,6 +7,10 @@
 
 import Foundation
 
+
+public enum RemoteFeedLoaderError: Equatable, Error {
+    case connectivityError
+}
 public class RemoteFeedLoader {
     private let url: URL
     private let client: HTTPClient
