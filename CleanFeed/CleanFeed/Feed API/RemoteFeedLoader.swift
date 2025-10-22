@@ -14,7 +14,7 @@ struct RemoteFeedItem: Equatable, Codable {
     let image: URL
 }
 
-public struct RemoteFeed: Equatable, Codable {
+struct RemoteFeed: Equatable, Codable {
     private let items: [RemoteFeedItem]
     
     func toFeedItems() -> [FeedItem] {
