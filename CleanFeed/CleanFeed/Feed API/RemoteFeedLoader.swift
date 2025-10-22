@@ -11,6 +11,12 @@ import Foundation
 public enum RemoteFeedLoaderError: Equatable, Error {
     case connectivityError
 }
+
+public enum RemoteFeedLoaderResult: Equatable {
+    case success([FeedItem])
+    case failure(RemoteFeedLoaderError)
+}
+
 public class RemoteFeedLoader {
     private let url: URL
     private let client: HTTPClient
