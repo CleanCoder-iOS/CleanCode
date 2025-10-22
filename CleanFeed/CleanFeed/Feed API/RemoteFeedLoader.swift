@@ -7,6 +7,27 @@
 
 import Foundation
 
+struct RemoteFeedItem: Equatable, Codable {
+    let id: UUID
+    let description: String?
+    let location: String?
+    let image: URL
+}
+
+public struct RemoteFeed: Equatable, Codable {
+    private let items: [RemoteFeedItem]
+    
+    func toFeedItems() -> [FeedItem] {
+        items.map {
+            FeedItem(
+                id: $0.id,
+                description: $0.description,
+                location: $0.location,
+                imageURL: $0.image
+            )
+        }
+    }
+}
 
 public enum RemoteFeedLoaderError: Equatable, Error {
     case invalidData
@@ -30,8 +51,12 @@ public class RemoteFeedLoader {
     public func load(completion: @escaping (RemoteFeedLoaderResult) -> Void) {
         client.get(from: url) { result in
             switch result {
-            case .success:
-                completion(.failure(.invalidData))
+            case let .success(data, response):
+                guard response.statusCode == 200,
+                      let remoteFeed = try? JSONDecoder().decode(RemoteFeed.self, from: data) else {
+                    return completion(.failure(.invalidData))
+                }
+                completion(.success(remoteFeed.toFeedItems()))
             case .failure:
                 completion(.failure(.connectivityError))
             }
